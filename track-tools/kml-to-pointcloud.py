@@ -53,6 +53,16 @@ def lonlat_to_utm(coords_str):
 
     return utm_coords_full
 
+"""
+Gets the UTM coordinate described by a single-point placemark in Google Earth.
+Input line should be the coordinates line with format:
+    "<coordinates>-122.6797019415874,47.30797394101634,69</coordinates>"
+
+i.e. longitude, latitude, altitude
+
+Returns a tuple in format:
+    (easting, northing, altitude)
+"""
 def get_ctl_point(line):
     # <coordinates>-122.6797019415874,47.30797394101634,69</coordinates>
 
@@ -63,6 +73,20 @@ def get_ctl_point(line):
             utm_coords[1],
             utm_coords[2])
 
+"""
+Gets the list of UTM coordinates describing a LineString placemark in Google
+Earth. Input line should be the series of coordinates with format:
+    -122.6797019415874,47.30797394101634,69 ...
+
+i.e. longitude,latitude,altitude [longitude,latitude,altitude] ...
+
+Returns a list of tuples in format:
+    {
+        (easting northing altitude),
+        [(easting northing altitude)],
+        ...
+    }
+"""
 def get_ref_points(line):
     # -122.6797019415874,47.30797394101634,69
 
@@ -77,6 +101,15 @@ def get_ref_points(line):
 
     return coords_all
 
+"""
+Writes an ASCII point cloud file in format:
+    easting northing altitude
+    [easting northing altitude]
+    ...
+
+Essentially a CSV using spaces instead of commas. data is a list of points as
+tuples in format (easting northing altitude). name is the filename
+"""
 def write_output(data, name):
     output = open(name, "w")
 
@@ -87,22 +120,39 @@ def write_output(data, name):
 
     output.close()
 
+"""
+Because UTM coordinates are based at an origin of 500000, 500000, they need to
+be rebased to be imported as a sensible point cloud. This method adjusts all
+coordinates given a list of point tuples in format (easting northing altitude)
+to be in reference to the given origin point.
+"""
 def rebase_points(points, origin):
     for (index, point) in enumerate(points):
         points[index] = (point[0] - origin[0],
                          point[1] - origin[1],
                          point[2])
 
+"""
+Rips a Google Earth KML consisting of LineStrings and single point Placemarks
+into a ASCII point cloud files. Files are called "refpoints.asc" which are the
+LineStrings and "ctlpoints.asc" which are the Placemarks. Files created in current
+working directory.
+"""
 def main(args):
     kml = open(args[0], "r")
     ref_points = []
     ctl_points = []
-    RESET = 0
-    REF_LINE = 1
-    CTL_POINT = 2
-    GET_REF_POINTS = 3
+
+    # Constants for FSM which figures out what to do with each KML line
+    RESET = 0           # look for next <Placmark> tag
+    REF_LINE = 1        # <Placemark> tag found. look for <LineString> tag
+    CTL_POINT = 2       # <LineString> tag not found. get coordinates for a single point Placemark
+    GET_REF_POINTS = 3  # <LineString> tag found. look for <coordinates> tag to rip points from
+
+    # tracks FSM state
     state = RESET
 
+    # get all LineStrings and Placemarks in UTM coordinates
     for line in kml:
         line = line.strip()
         if line.startswith("<Placemark>"):
@@ -126,13 +176,16 @@ def main(args):
             if line.startswith("<coordinates>"):
                 state = GET_REF_POINTS
 
+    # print all points for debugging
     origin = ctl_points[0]
     print(ref_points)
     print(ctl_points)
 
+    # rebase points around a more sensible origin
     rebase_points(ref_points, origin)
     rebase_points(ctl_points, origin)
 
+    # write points out to files
     write_output(ref_points, "refpoints.asc")
     write_output(ctl_points, "ctlpoints.asc")
 

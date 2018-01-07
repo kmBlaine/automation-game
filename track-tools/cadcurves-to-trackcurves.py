@@ -40,11 +40,11 @@ def main(args):
     straights = cadcsv[cadcsv["type"] == "s"]
     curves = cadcsv[cadcsv["type"] != "s"]
 
-    curve_height_diffs = curves["startaltitude"] - curves["endaltitude"]
+    curve_height_diffs = curves["endaltitude"] - curves["startaltitude"]
     curve_lengths = curves["length"] / 180.0 * math.pi * curves["radius"]
     curves["slope"] = curve_height_diffs / curve_lengths * 100.0
 
-    straight_height_diffs = straights["startaltitude"] - straights["endaltitude"]
+    straight_height_diffs = straights["endaltitude"] - straights["startaltitude"]
     straights["slope"] = straight_height_diffs / straights["length"] * 100.0
 
     track_csv = pandas.concat([straights, curves])
@@ -81,9 +81,10 @@ def main(args):
     track_file.write("local s = 0\r\n"
                      "local l = 1\r\n"
                      "local r = -1\r\n"
+                     "\r\n"
                      "Track =\r\n"
                      "{\r\n"
-                     "    Name = \"Artondale Street Circuit\",\r\n"
+                     "    Name = \"New Test Track\",\r\n"
                      "\r\n"
                      "    --Track Image Info\r\n"
                      "    --Track Image must be 1280 x 720\r\n"
@@ -100,7 +101,9 @@ def main(args):
     track_file.write("    " + slope_str + ",\r\n")
     track_file.write("    " + sport_str + ",\r\n")
     track_file.write("    " + camber_str + ",\r\n")
-    track_file.write("}\r\n")
+    track_file.write("    Split1 = 500,\r\n"
+                     "    Split2 = 1000,\r\n"
+                     "}\r\n")
 
     track_file.close()
 
